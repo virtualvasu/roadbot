@@ -1,38 +1,41 @@
-# RoadBot - Tamil Nadu Traffic Rules Assistant
+# Document AI Assistant - Multi-Document RAG System
 
-An intelligent AI-powered assistant built using Retrieval-Augmented Generation (RAG) that provides accurate, context-aware answers about Tamil Nadu traffic rules, penalties, and driver rights. RoadBot combines semantic search with advanced language models to deliver reliable and explainable responses.
+An intelligent AI-powered assistant built using Retrieval-Augmented Generation (RAG) that provides accurate, context-aware answers based on your uploaded documents. Upload multiple PDFs, text files, or Word documents and get instant answers with source attribution.
 
-## Features
+## ✨ Features
 
-🚗 **Comprehensive Traffic Knowledge** - Covers all Tamil Nadu traffic rules and regulations  
-⚡ **Fast Response Time** - Quick retrieval and generation using FAISS and HuggingFace models  
-🎯 **Accurate Information** - RAG-based approach ensures responses are grounded in official documents  
-💬 **Multiple Interfaces** - CLI tool, FastAPI backend, and web frontend  
-🔒 **Reliable Answers** - No hallucination, answers based only on provided context  
+📁 **Multi-Document Upload** - Support for PDF, TXT, and DOCX files  
+🔍 **Intelligent Search** - RAG-powered semantic search with FAISS vector database  
+⚡ **Real-time Processing** - Automatic document indexing and fast response times  
+🎯 **Source Attribution** - Answers include references to source documents  
+🗂️ **Document Management** - Upload, delete, and organize your document library  
+💬 **Modern Interface** - Professional web UI with drag-and-drop upload  
+🔒 **Reliable Answers** - Responses grounded in your uploaded content only  
 
-## Project Structure
+## 🏗️ Project Structure
 ```
-roadbot/
+document_ai_assistant/
 ├── data/
 │   ├── processed/
-│   │   ├── faiss_cosine_index.idx
-│   │   ├── TN_traffic_rules_chunks.json
-│   │   └── TN_traffic_rules.txt
-│   └── TN Traffic rules.pdf
+│   │   ├── combined_faiss_index.idx      # Combined vector index
+│   │   ├── combined_chunks.json          # All document chunks
+│   │   ├── documents_metadata.json       # Document metadata
+│   │   └── documents/                    # Individual document files
+│   └── uploads/                          # Uploaded files storage
 ├── src/
 │   ├── __init__.py
-│   ├── chunking.py
-│   ├── embedding.py
-│   ├── generator.py
-│   ├── main.py
-│   ├── retriever.py
-│   └── text_extraction.py
+│   ├── chunking.py                       # Text chunking logic
+│   ├── embedding.py                      # Vector embedding generation
+│   ├── generator.py                      # RAG answer generation
+│   ├── retriever.py                      # Document retrieval
+│   ├── text_extraction.py               # Multi-format text extraction
+│   └── document_manager.py              # Document lifecycle management
 ├── api/
-│   └── app.py
+│   └── app.py                           # FastAPI backend
 ├── frontend/
-│   ├── index.html
-│   ├── script.js
-│   └── styles.css
+│   ├── index.html                       # Web interface
+│   ├── script.js                        # Frontend functionality
+│   └── styles.css                       # Modern styling
 ├── .env.example
 ├── .gitignore
 ├── README.md
@@ -40,14 +43,16 @@ roadbot/
 └── pyproject.toml
 ```
 
-## Technology Stack
+## 🛠️ Technology Stack
 
 **Backend:**
 - Python 3.11+
-- FastAPI for REST API
-- FAISS for vector similarity search
-- Sentence Transformers for embeddings
-- HuggingFace Transformers for language generation
+- FastAPI for REST API with file upload support
+- FAISS for vector similarity search with cosine similarity
+- Sentence Transformers for text embeddings
+- HuggingFace Transformers / OpenAI for language generation
+- PyPDF2 for PDF text extraction
+- python-docx for Word document processing
 
 **Frontend:**
 - Vanilla HTML/CSS/JavaScript

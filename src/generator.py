@@ -4,6 +4,7 @@ import os
 import requests
 import json
 from dotenv import load_dotenv
+from typing import List, Tuple, Optional
 
 from .retriever import Retriever
 
@@ -17,11 +18,24 @@ class Generator:
         """
         # Load your Retriever
         BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-
-        self.retriever = Retriever(
-            index_path=os.path.join(BASE_DIR, "data", "processed", "faiss_cosine_index.idx"),
-            chunk_json_path=os.path.join(BASE_DIR, "data", "processed", "TN_traffic_rules_chunks.json")
-        )
+        
+        # Try to use combined index first, fall back to original
+        combined_index_path = os.path.join(BASE_DIR, "data", "processed", "combined_faiss_index.idx")
+        combined_chunks_path = os.path.join(BASE_DIR, "data", "processed", "combined_chunks.json")
+        
+        if os.path.exists(combined_index_path) and os.path.exists(combined_chunks_path):
+            self.retriever = Retriever(
+                index_path=combined_index_path,
+                chunk_json_path=combined_chunks_path
+            )
+            print("Using combined document index")
+        else:
+            # Fallback to original index
+            self.retriever = Retriever(
+                index_path=os.path.join(BASE_DIR, "data", "processed", "faiss_cosine_index.idx"),
+                chunk_json_path=os.path.join(BASE_DIR, "data", "processed", "TN_traffic_rules_chunks.json")
+            )
+            print("Using original traffic rules index")
 
         # Available working models from HF Router API
         self.available_models = [
@@ -42,25 +56,55 @@ class Generator:
         if not self.api_key and not self.openai_api_key:
             raise ValueError("Either HF_TOKEN or OPENAI_API_KEY environment variable must be set")
 
-    def ask(self, query: str, top_k: int = 10) -> str:
+    def ask(self, query: str, top_k: int = 10, document_ids: Optional[List[str]] = None) -> Tuple[str, List[str]]:
         """
         Uses retriever to find context and generates an answer using available APIs.
+        
+        Args:
+            query: User's question
+            top_k: Number of relevant chunks to retrieve
+            document_ids: Optional list of specific document IDs to search within
+            
+        Returns:
+            Tuple of (answer, list of document filenames used)
         """
         try:
             # Retrieve top-k relevant chunks
             print(f"Querying retriever for: {query}")
             relevant_chunks = self.retriever.query(query, top_k)
             print(f"Retrieved {len(relevant_chunks)} chunks")
-
+            
+            # Filter chunks by document IDs if specified
+            if document_ids:
+                relevant_chunks = [
+                    chunk for chunk in relevant_chunks 
+                    if chunk.get('document_id') in document_ids
+                ]
+                print(f"Filtered to {len(relevant_chunks)} chunks from specified documents")
+            
+            # Extract context and track document sources
             context = "\n\n".join([chunk["text"] for chunk in relevant_chunks])
+            
+            # Get unique document filenames used
+            documents_used = list(set([
+                chunk.get('filename', 'Unknown Document') 
+                for chunk in relevant_chunks 
+                if 'filename' in chunk
+            ]))
+            
+            # If no documents specified in chunks, use legacy format
+            if not documents_used and relevant_chunks:
+                documents_used = ['Tamil Nadu Traffic Rules']
 
             # Try different approaches based on available APIs
             if self.openai_api_key:
                 print("Using OpenAI API...")
-                return self._call_openai_api(context, query)
+                answer = self._call_openai_api(context, query)
             else:
                 print("Using Hugging Face Router API...")
-                return self._call_huggingface_router_api(context, query)
+                answer = self._call_huggingface_router_api(context, query)
+            
+            return answer, documents_used
                 
         except Exception as e:
             print(f"Error in ask method: {type(e).__name__}: {str(e)}")
@@ -69,10 +113,11 @@ class Generator:
     def _call_openai_api(self, context: str, query: str) -> str:
         """Call OpenAI API."""
         system_content = (
-            "You are a traffic law assistant for Tamil Nadu traffic rules. "
-            "Answer questions using only the provided context. "
+            "You are a document assistant that helps answer questions based on uploaded documents. "
+            "Answer questions using only the provided context from the documents. "
             "If information is not in the context, say it's not available. "
-            "Be clear, factual, and include specific fines (₹) when mentioned."
+            "Be clear, factual, and cite specific information from the documents when possible. "
+            "If the context includes traffic rules, include specific fines (₹) when mentioned."
         )
 
         payload = {
@@ -102,10 +147,11 @@ class Generator:
         """Call Hugging Face Router API with working models."""
         
         system_content = (
-            "You are a traffic law assistant for Tamil Nadu traffic rules. "
-            "Answer questions using only the provided context. "
+            "You are a document assistant that helps answer questions based on uploaded documents. "
+            "Answer questions using only the provided context from the documents. "
             "If information is not in the context, say it's not available. "
-            "Be clear, factual, and include specific fines (₹) when mentioned."
+            "Be clear, factual, and cite specific information from the documents when possible. "
+            "If the context includes traffic rules, include specific fines (₹) when mentioned."
         )
 
         models_to_try = [self.model_name] + [m for m in self.available_models if m != self.model_name]
@@ -160,13 +206,14 @@ class Generator:
                 relevant_sentences.append(sentence.strip())
         
         if relevant_sentences:
-            return f"Based on the Tamil Nadu traffic rules: {'. '.join(relevant_sentences[:3])}."
+            return f"Based on the available documents: {'. '.join(relevant_sentences[:3])}."
         else:
-            return "I couldn't find specific information about your query in the available Tamil Nadu traffic rules context."
+            return "I couldn't find specific information about your query in the available documents."
 
 if __name__ == "__main__":
     generator = Generator()
     query = "What are the rules for overtaking?"
-    answer = generator.ask(query)
+    answer, documents_used = generator.ask(query)
     print("\nAnswer:\n")
     print(answer)
+    print(f"\nDocuments used: {documents_used}")
