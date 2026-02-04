@@ -5,66 +5,153 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tamil Nadu Traffic Rules Assistant</title>
     <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <div class="chat-app">
-        <div class="header">
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
             <div class="header-content">
-                <div class="traffic-icon">🚦</div>
-                <div class="header-text">
-                    <h1>Tamil Nadu Traffic Assistant</h1>
-                    <p>Your AI-powered guide to traffic rules, fines & road safety</p>
+                <div class="logo">
+                    <i class="fas fa-traffic-light"></i>
+                    <h1>TN Traffic Rules Assistant</h1>
                 </div>
-            </div>
-            <div class="status-indicator" id="statusIndicator">
-                <div class="status-dot" id="statusDot"></div>
-                <div class="status-text" id="statusText">Connecting...</div>
-            </div>
-        </div>
-
-        <div class="chat-container scrollbar-custom" id="chatContainer">
-            <div class="welcome-card">
-                <h2>🚗 Welcome to Your Traffic Assistant!</h2>
-                <p>I'm here to help you understand Tamil Nadu traffic rules, penalties, license procedures, and road safety guidelines. Ask me anything!</p>
-                
-                <div class="sample-questions">
-                    <div class="sample-question" onclick="askSampleQuestion('What is the fine amount for not wearing a helmet?')">
-                        💰 What is the fine amount for not wearing a helmet?
-                    </div>
-                    <div class="sample-question" onclick="askSampleQuestion('How to apply for a driving license?')">
-                        📄 How to apply for a driving license?
-                    </div>
-                    <div class="sample-question" onclick="askSampleQuestion('What are the speed limits in Tamil Nadu?')">
-                        🏃 What are the speed limits in Tamil Nadu?
-                    </div>
-                    <div class="sample-question" onclick="askSampleQuestion('Tax rates')">
-                        🚫 Tax rates
-                    </div>
+                <div class="header-info">
+                    <span class="status-indicator" id="apiStatus">
+                        <i class="fas fa-circle"></i>
+                        <span>Checking...</span>
+                    </span>
                 </div>
             </div>
         </div>
+    </header>
 
-        <div class="typing-indicator" id="typingIndicator">
-            <div class="typing-dots">
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Hero Section -->
+            <section class="hero">
+                <div class="hero-content">
+                    <h2>Get instant answers about Tamil Nadu Traffic Rules</h2>
+                    <p>Ask any question about traffic regulations, fines, and procedures in Tamil Nadu. Our RAG-powered assistant provides accurate information based on official traffic rules.</p>
+                </div>
+            </section>
+
+            <!-- Chat Interface -->
+            <section class="chat-section">
+                <div class="chat-container">
+                    <!-- Settings Panel -->
+                    <div class="settings-panel">
+                        <h3><i class="fas fa-cog"></i> Query Settings</h3>
+                        <div class="setting-item">
+                            <label for="topKSlider">Number of relevant documents (top_k): <span id="topKValue">10</span></label>
+                            <input type="range" id="topKSlider" min="1" max="20" value="10" class="slider">
+                            <small>Higher values provide more context but may include less relevant information</small>
+                        </div>
+                    </div>
+
+                    <!-- Chat Messages -->
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message bot-message">
+                            <div class="message-avatar">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="message-content">
+                                <p>Hello! I'm your Tamil Nadu Traffic Rules Assistant. Ask me anything about traffic regulations, fines, driving procedures, or vehicle requirements in Tamil Nadu.</p>
+                                <div class="quick-questions">
+                                    <p><strong>Try these sample questions:</strong></p>
+                                    <button class="quick-question-btn" onclick="askQuestion('What is the penalty for not wearing a helmet?')">
+                                        What is the penalty for not wearing a helmet?
+                                    </button>
+                                    <button class="quick-question-btn" onclick="askQuestion('What are the speed limits on highways?')">
+                                        What are the speed limits on highways?
+                                    </button>
+                                    <button class="quick-question-btn" onclick="askQuestion('How to get a driving license?')">
+                                        How to get a driving license?
+                                    </button>
+                                    <button class="quick-question-btn" onclick="askQuestion('What documents are required for vehicle registration?')">
+                                        What documents are required for vehicle registration?
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input Section -->
+                    <div class="chat-input-section">
+                        <div class="input-container">
+                            <textarea 
+                                id="questionInput" 
+                                placeholder="Ask your question about TN traffic rules..." 
+                                rows="1"
+                                maxlength="500"
+                            ></textarea>
+                            <button id="sendButton" onclick="handleSubmit()">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div class="input-footer">
+                            <span class="char-counter">0/500</span>
+                            <span class="tip">Press Enter to send, Shift+Enter for new line</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Features Section -->
+            <section class="features">
+                <h3>Features</h3>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <i class="fas fa-search"></i>
+                        <h4>RAG-Powered Search</h4>
+                        <p>Retrieval-Augmented Generation using FAISS for accurate, context-aware answers</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-gavel"></i>
+                        <h4>Official Rules</h4>
+                        <p>Based on authentic Tamil Nadu traffic regulations and motor vehicle acts</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-rupee-sign"></i>
+                        <h4>Fine Information</h4>
+                        <p>Get current penalty amounts and fine structures for traffic violations</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-clock"></i>
+                        <h4>Real-time Answers</h4>
+                        <p>Fast response times with comprehensive information retrieval</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 Tamil Nadu Traffic Rules Assistant. Built with RAG + FastAPI</p>
+            <div class="footer-links">
+                <a href="#" onclick="showApiInfo()">API Info</a>
+                <a href="#" onclick="showAbout()">About</a>
             </div>
         </div>
+    </footer>
 
-        <div class="input-container">
-            <div class="input-wrapper">
-                <div class="input-field">
-                    <textarea 
-                        id="queryInput" 
-                        placeholder="Ask me about traffic rules, fines, procedures..."
-                        rows="1"
-                    ></textarea>
-                </div>
-                <button id="askButton" title="Send message">
-                    ➤
-                </button>
-            </div>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Processing your question...</p>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div id="modalBody"></div>
         </div>
     </div>
 

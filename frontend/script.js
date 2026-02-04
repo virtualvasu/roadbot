@@ -1,182 +1,373 @@
-const API_BASE_URL = 'http://localhost:8000';
+// Configuration
+const API_BASE_URL = 'http://localhost:8000'; // Change this to your API URL
 
-const chatContainer = document.getElementById('chatContainer');
-const queryInput = document.getElementById('queryInput');
-const askButton = document.getElementById('askButton');
-const typingIndicator = document.getElementById('typingIndicator');
-const statusIndicator = document.getElementById('statusIndicator');
-const statusDot = document.getElementById('statusDot');
-const statusText = document.getElementById('statusText');
+// DOM Elements
+const chatMessages = document.getElementById('chatMessages');
+const questionInput = document.getElementById('questionInput');
+const sendButton = document.getElementById('sendButton');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const topKSlider = document.getElementById('topKSlider');
+const topKValue = document.getElementById('topKValue');
+const apiStatus = document.getElementById('apiStatus');
+const modal = document.getElementById('modal');
+const modalBody = document.getElementById('modalBody');
 
-let isFirstMessage = true;
+// State
+let isWaitingForResponse = false;
 
-// Auto-resize textarea
-queryInput.addEventListener('input', function() {
-    this.style.height = 'auto';
-    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+// Initialize the application
+document.addEventListener('DOMContentLoaded', function() {
+    initializeApp();
 });
 
-// Check API connection on load
-checkApiConnection();
+function initializeApp() {
+    // Check API status
+    checkApiStatus();
+    
+    // Setup event listeners
+    setupEventListeners();
+    
+    // Auto-resize textarea
+    autoResizeTextarea();
+    
+    // Update character counter
+    updateCharacterCounter();
+}
 
-// Event listeners
-askButton.addEventListener('click', handleAskQuestion);
-queryInput.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        handleAskQuestion();
-    }
-});
+function setupEventListeners() {
+    // Send button click
+    sendButton.addEventListener('click', handleSubmit);
+    
+    // Enter key to submit (Shift+Enter for new line)
+    questionInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSubmit();
+        }
+    });
+    
+    // Top-K slider
+    topKSlider.addEventListener('input', function() {
+        topKValue.textContent = this.value;
+    });
+    
+    // Character counter
+    questionInput.addEventListener('input', function() {
+        updateCharacterCounter();
+        autoResizeTextarea();
+    });
+    
+    // Modal close events
+    window.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+    
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeModal();
+        }
+    });
+}
 
-async function checkApiConnection() {
+async function checkApiStatus() {
+    const statusElement = apiStatus.querySelector('span');
+    const iconElement = apiStatus.querySelector('i');
+    
     try {
+        statusElement.textContent = 'Checking...';
+        apiStatus.className = 'status-indicator';
+        
         const response = await fetch(`${API_BASE_URL}/`);
-        if (response.ok) {
-            statusText.textContent = 'Online';
-            statusDot.style.background = '#4ade80';
+        const data = await response.json();
+        
+        if (response.ok && data.message) {
+            statusElement.textContent = 'Online';
+            apiStatus.className = 'status-indicator online';
+            iconElement.style.color = '#22c55e';
         } else {
-            throw new Error('API not responding');
+            throw new Error('Unexpected response');
         }
     } catch (error) {
-        statusText.textContent = 'Offline';
-        statusDot.style.background = '#ef4444';
-        statusDot.style.animation = 'none';
-        console.error('API connection failed:', error);
+        console.error('API Status Check Error:', error);
+        statusElement.textContent = 'Offline';
+        apiStatus.className = 'status-indicator offline';
+        iconElement.style.color = '#ef4444';
     }
 }
 
-function askSampleQuestion(question) {
-    queryInput.value = question;
-    handleAskQuestion();
+function autoResizeTextarea() {
+    questionInput.style.height = 'auto';
+    questionInput.style.height = Math.min(questionInput.scrollHeight, 120) + 'px';
 }
 
-async function handleAskQuestion() {
-    const query = queryInput.value.trim();
+function updateCharacterCounter() {
+    const charCounter = document.querySelector('.char-counter');
+    const length = questionInput.value.length;
+    charCounter.textContent = `${length}/500`;
+    
+    if (length > 450) {
+        charCounter.style.color = '#ef4444';
+    } else if (length > 400) {
+        charCounter.style.color = '#f59e0b';
+    } else {
+        charCounter.style.color = '#718096';
+    }
+}
 
-    if (!query) {
-        queryInput.focus();
+async function handleSubmit() {
+    const question = questionInput.value.trim();
+    
+    if (!question || isWaitingForResponse) {
         return;
     }
-
-    // Clear welcome message if this is the first question
-    if (isFirstMessage) {
-        chatContainer.innerHTML = '';
-        isFirstMessage = false;
-    }
-
-    // Add user message
-    addMessage(query, 'user');
     
-    // Clear input and show typing indicator
-    queryInput.value = '';
-    queryInput.style.height = 'auto';
-    setTyping(true);
-
+    // Validate input
+    if (question.length > 500) {
+        showError('Question is too long. Please keep it under 500 characters.');
+        return;
+    }
+    
+    const topK = parseInt(topKSlider.value);
+    
+    // Add user message to chat
+    addMessage(question, 'user');
+    
+    // Clear input
+    questionInput.value = '';
+    updateCharacterCounter();
+    autoResizeTextarea();
+    
+    // Show loading
+    showLoading(true);
+    isWaitingForResponse = true;
+    sendButton.disabled = true;
+    
     try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
+        // Send request to API
         const response = await fetch(`${API_BASE_URL}/ask`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                query: query,
-                top_k: 10
-            }),
-            signal: controller.signal
+                query: question,
+                top_k: topK
+            })
         });
-
-        clearTimeout(timeoutId);
-
+        
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            const errorMessage = errorData.detail || `HTTP error! status: ${response.status}`;
-            throw new Error(errorMessage);
+            throw new Error(errorData.detail || `HTTP Error: ${response.status}`);
         }
-
+        
         const data = await response.json();
         
-        if (!data.answer) {
-            throw new Error('No answer received from API');
-        }
-        
-        // Simulate some typing time for better UX
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        // Add bot response
+        // Add bot response to chat
         addMessage(data.answer, 'bot');
         
-        // Update status to online
-        statusText.textContent = 'Online';
-        statusDot.style.background = '#4ade80';
-        
     } catch (error) {
-        console.error('Error:', error);
+        console.error('API Error:', error);
         
-        let errorMessage = '🚨 Sorry, I encountered an error while processing your question.';
+        let errorMessage = 'Sorry, I encountered an error while processing your question. ';
         
-        if (error.name === 'AbortError') {
-            errorMessage = '🚨 Request timeout. The server took too long to respond. Please try again.';
-        } else if (error.message.includes('Failed to fetch')) {
-            errorMessage = '🚨 Connection error. Please make sure the API server is running at ' + API_BASE_URL;
-        } else if (error.message) {
-            errorMessage = `🚨 Error: ${error.message}`;
+        if (error.message.includes('fetch')) {
+            errorMessage += 'Please check if the API server is running.';
+        } else if (error.message.includes('503')) {
+            errorMessage += 'The service is temporarily unavailable. Please try again later.';
+        } else if (error.message.includes('500')) {
+            errorMessage += 'There was an internal server error. Please try again.';
+        } else {
+            errorMessage += error.message;
         }
         
-        addMessage(errorMessage, 'bot');
-        
-        // Update status to offline
-        statusText.textContent = 'Offline';
-        statusDot.style.background = '#ef4444';
-        statusDot.style.animation = 'none';
+        addMessage(errorMessage, 'bot', true);
     } finally {
-        setTyping(false);
+        showLoading(false);
+        isWaitingForResponse = false;
+        sendButton.disabled = false;
+        questionInput.focus();
     }
 }
 
-function addMessage(content, type) {
+function addMessage(content, sender, isError = false) {
     const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${type}-message`;
+    messageDiv.className = `message ${sender}-message`;
     
-    const messageContent = document.createElement('div');
-    messageContent.className = 'message-content';
-    messageContent.textContent = content;
+    const avatarDiv = document.createElement('div');
+    avatarDiv.className = 'message-avatar';
+    avatarDiv.innerHTML = sender === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
     
-    messageDiv.appendChild(messageContent);
-    chatContainer.appendChild(messageDiv);
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
     
-    // Scroll to bottom smoothly
-    chatContainer.scrollTo({
-        top: chatContainer.scrollHeight,
-        behavior: 'smooth'
-    });
-}
-
-function setTyping(isTyping) {
-    if (isTyping) {
-        typingIndicator.style.display = 'block';
-        chatContainer.appendChild(typingIndicator);
-        askButton.disabled = true;
-        askButton.style.opacity = '0.6';
-    } else {
-        typingIndicator.style.display = 'none';
-        askButton.disabled = false;
-        askButton.style.opacity = '1';
+    const messageP = document.createElement('p');
+    messageP.textContent = content;
+    
+    if (isError) {
+        messageP.style.background = '#fed7d7';
+        messageP.style.color = '#c53030';
+        messageP.style.borderLeft = '4px solid #fc8181';
     }
+    
+    contentDiv.appendChild(messageP);
+    messageDiv.appendChild(avatarDiv);
+    messageDiv.appendChild(contentDiv);
+    
+    chatMessages.appendChild(messageDiv);
     
     // Scroll to bottom
-    chatContainer.scrollTo({
-        top: chatContainer.scrollHeight,
-        behavior: 'smooth'
-    });
+    chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// Auto-focus on input when page loads
-window.addEventListener('load', () => {
-    queryInput.focus();
+function askQuestion(question) {
+    questionInput.value = question;
+    updateCharacterCounter();
+    autoResizeTextarea();
+    handleSubmit();
+}
+
+function showLoading(show) {
+    if (show) {
+        loadingOverlay.classList.add('show');
+    } else {
+        loadingOverlay.classList.remove('show');
+    }
+}
+
+function showError(message) {
+    addMessage(message, 'bot', true);
+}
+
+function showModal(content) {
+    modalBody.innerHTML = content;
+    modal.style.display = 'block';
+}
+
+function closeModal() {
+    modal.style.display = 'none';
+}
+
+function showApiInfo() {
+    const apiInfo = `
+        <h2><i class="fas fa-info-circle"></i> API Information</h2>
+        <div style="text-align: left; margin-top: 20px;">
+            <h3>Available Endpoints:</h3>
+            <ul style="margin: 15px 0; padding-left: 20px;">
+                <li><strong>GET /</strong> - Welcome message and API status</li>
+                <li><strong>POST /ask</strong> - Submit questions about traffic rules</li>
+            </ul>
+            
+            <h3>API Configuration:</h3>
+            <ul style="margin: 15px 0; padding-left: 20px;">
+                <li><strong>Base URL:</strong> ${API_BASE_URL}</li>
+                <li><strong>Method:</strong> POST</li>
+                <li><strong>Content-Type:</strong> application/json</li>
+            </ul>
+            
+            <h3>Request Parameters:</h3>
+            <ul style="margin: 15px 0; padding-left: 20px;">
+                <li><strong>query:</strong> Your traffic rules question (string, max 500 chars)</li>
+                <li><strong>top_k:</strong> Number of relevant documents to retrieve (1-20)</li>
+            </ul>
+            
+            <h3>Technology Stack:</h3>
+            <ul style="margin: 15px 0; padding-left: 20px;">
+                <li><strong>Backend:</strong> FastAPI + Python</li>
+                <li><strong>AI Model:</strong> RAG (Retrieval-Augmented Generation)</li>
+                <li><strong>Vector Database:</strong> FAISS</li>
+                <li><strong>LLM:</strong> Hugging Face Router API / OpenAI</li>
+            </ul>
+        </div>
+    `;
+    showModal(apiInfo);
+}
+
+function showAbout() {
+    const aboutContent = `
+        <h2><i class="fas fa-book"></i> About This Application</h2>
+        <div style="text-align: left; margin-top: 20px;">
+            <h3>Tamil Nadu Traffic Rules Assistant</h3>
+            <p style="margin: 15px 0; line-height: 1.6;">
+                This intelligent assistant helps you understand Tamil Nadu traffic regulations, 
+                penalties, and procedures using advanced RAG (Retrieval-Augmented Generation) technology.
+            </p>
+            
+            <h3>Key Features:</h3>
+            <ul style="margin: 15px 0; padding-left: 20px; line-height: 1.8;">
+                <li>Real-time answers to traffic rule questions</li>
+                <li>Accurate penalty and fine information</li>
+                <li>Official Tamil Nadu traffic regulations</li>
+                <li>Fast semantic search with FAISS vector database</li>
+                <li>Configurable result precision with top-k parameter</li>
+            </ul>
+            
+            <h3>How It Works:</h3>
+            <ol style="margin: 15px 0; padding-left: 20px; line-height: 1.8;">
+                <li>Your question is processed using semantic search</li>
+                <li>Relevant traffic rule sections are retrieved from the database</li>
+                <li>AI generates a precise answer based on official regulations</li>
+                <li>Response includes specific fines and penalties when applicable</li>
+            </ol>
+            
+            <h3>Data Source:</h3>
+            <p style="margin: 15px 0; line-height: 1.6;">
+                All information is derived from official Tamil Nadu traffic rules and 
+                Motor Vehicles Act documentation to ensure accuracy and reliability.
+            </p>
+            
+            <p style="margin-top: 20px; font-size: 0.9em; color: #718096;">
+                <strong>Built in 2026</strong> | RAG + FastAPI + FAISS + Modern Web Technologies
+            </p>
+        </div>
+    `;
+    showModal(aboutContent);
+}
+
+// Utility functions for better UX
+function formatResponse(text) {
+    // Add basic formatting to responses
+    return text
+        .replace(/₹(\d+)/g, '<strong>₹$1</strong>') // Highlight prices
+        .replace(/\b(\d+)\s*(years?|months?|days?)\b/gi, '<strong>$1 $2</strong>') // Highlight time periods
+        .replace(/\b(Section \d+|Rule \d+|Article \d+)\b/gi, '<strong>$1</strong>'); // Highlight legal references
+}
+
+// Auto-refresh API status periodically
+setInterval(checkApiStatus, 300000); // Check every 5 minutes
+
+// Add some visual feedback for button interactions
+sendButton.addEventListener('mouseenter', function() {
+    if (!this.disabled) {
+        this.style.transform = 'scale(1.05)';
+    }
 });
 
-// Keep connection status updated
-setInterval(checkApiConnection, 30000); // Check every 30 seconds
+sendButton.addEventListener('mouseleave', function() {
+    if (!this.disabled) {
+        this.style.transform = 'scale(1)';
+    }
+});
+
+// Performance optimization: debounce the auto-resize function
+let resizeTimeout;
+questionInput.addEventListener('input', function() {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(autoResizeTextarea, 100);
+});
+
+// Add offline/online detection
+window.addEventListener('online', function() {
+    console.log('Connection restored');
+    checkApiStatus();
+});
+
+window.addEventListener('offline', function() {
+    console.log('Connection lost');
+    const statusElement = apiStatus.querySelector('span');
+    const iconElement = apiStatus.querySelector('i');
+    statusElement.textContent = 'No Connection';
+    apiStatus.className = 'status-indicator offline';
+    iconElement.style.color = '#ef4444';
+});
