@@ -98,12 +98,18 @@ class DocumentManager:
             # Generate chunks
             chunks = chunk_text(text, chunk_size=500, overlap=50)
             
+            # Save chunks to JSON file
+            chunks_file_path = os.path.join(self.processed_dir, f"{document_id}_chunks.json")
+            with open(chunks_file_path, 'w', encoding='utf-8') as f:
+                json.dump(chunks, f, indent=2, ensure_ascii=False)
+            
             # Save chunks with document metadata
             chunks_with_metadata = [
                 {
-                    "text": chunk,
+                    "text": chunk["text"],
                     "document_id": document_id,
                     "chunk_index": i,
+                    "chunk_id": chunk.get("chunk_id", i + 1),
                     "filename": filename
                 }
                 for i, chunk in enumerate(chunks)

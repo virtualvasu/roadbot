@@ -11,22 +11,6 @@ export interface QueryResponse {
   documents_used: string[]
 }
 
-export interface DocumentInfo {
-  id: string
-  filename: string
-  upload_date: string
-  file_size: number
-  status: string
-  chunk_count: number
-}
-
-export interface UploadResponse {
-  success: boolean
-  document_id: string
-  filename: string
-  message: string
-}
-
 export interface ChatMessage {
   id: string
   type: 'user' | 'assistant'

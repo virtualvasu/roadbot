@@ -2,6 +2,7 @@
 
 import os
 import uuid
+import time
 from typing import List, Dict, Optional
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
@@ -11,15 +12,17 @@ class QdrantVectorStore:
     def __init__(self, url: str = None, api_key: str = None):
         """Initialize Qdrant client with cloud or local connection"""
         if url and api_key:
-            # Cloud connection with increased timeout
+            # Cloud connection with increased timeout and retry parameters
             self.client = QdrantClient(
                 url=url, 
                 api_key=api_key,
-                timeout=60  # Increase timeout to 60 seconds
+                timeout=120,  # Increase timeout to 120 seconds
+                # Add additional connection parameters for reliability
+                prefer_grpc=False,  # Use REST API for better timeout handling
             )
         else:
             # Local connection (fallback)
-            self.client = QdrantClient(host="localhost", port=6333, timeout=60)
+            self.client = QdrantClient(host="localhost", port=6333, timeout=120)
         
         self.collection_name = "traffic_rules"
         self._ensure_collection()
@@ -46,7 +49,7 @@ class QdrantVectorStore:
             raise
     
     def add_document_chunks(self, chunks: List[Dict], embeddings: np.ndarray, document_id: str, filename: str):
-        """Add chunks from a document with metadata"""
+        """Add chunks from a document with metadata, using retry logic and batch processing"""
         points = []
         
         for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
@@ -64,16 +67,40 @@ class QdrantVectorStore:
                 }
             ))
         
-        try:
-            self.client.upsert(
-                collection_name=self.collection_name,
-                points=points
-            )
-            print(f"Added {len(points)} chunks for document {document_id}")
-            return True
-        except Exception as e:
-            print(f"Error adding chunks: {str(e)}")
-            return False
+        # Process in batches to avoid timeouts with large documents
+        batch_size = 50  # Reduce batch size for more reliable uploads
+        total_batches = (len(points) + batch_size - 1) // batch_size
+        
+        for batch_idx in range(total_batches):
+            start_idx = batch_idx * batch_size
+            end_idx = min(start_idx + batch_size, len(points))
+            batch_points = points[start_idx:end_idx]
+            
+            # Retry logic with exponential backoff
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    self.client.upsert(
+                        collection_name=self.collection_name,
+                        points=batch_points,
+                        wait=True  # Wait for operation to complete
+                    )
+                    print(f"Added batch {batch_idx + 1}/{total_batches} ({len(batch_points)} chunks) for document {document_id}")
+                    break  # Success, exit retry loop
+                    
+                except Exception as e:
+                    wait_time = (2 ** attempt) * 5  # Exponential backoff: 5s, 10s, 20s
+                    print(f"Attempt {attempt + 1} failed for batch {batch_idx + 1}: {str(e)}")
+                    
+                    if attempt < max_retries - 1:
+                        print(f"Retrying in {wait_time} seconds...")
+                        time.sleep(wait_time)
+                    else:
+                        print(f"Failed to add batch {batch_idx + 1} after {max_retries} attempts")
+                        return False
+        
+        print(f"Successfully added all {len(points)} chunks for document {document_id}")
+        return True
     
     def search(self, query_vector: np.ndarray, top_k: int = 10, document_ids: Optional[List[str]] = None) -> List[Dict]:
         """Search with optional document filtering"""

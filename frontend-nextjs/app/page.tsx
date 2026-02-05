@@ -4,8 +4,6 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { 
   MessageSquare, 
-  Upload, 
-  Settings, 
   Car,
   Shield,
   AlertTriangle,
@@ -13,23 +11,11 @@ import {
   Menu,
   X
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChatInterface } from '@/components/chat/ChatInterface'
-import { FileUpload } from '@/components/documents/FileUpload'
-import { DocumentManager } from '@/components/documents/DocumentManager'
-
-type ActiveTab = 'chat' | 'upload' | 'manage'
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('chat')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-
-  const tabs = [
-    { id: 'chat' as const, label: 'Chat Assistant', icon: MessageSquare },
-    { id: 'upload' as const, label: 'Upload Documents', icon: Upload },
-    { id: 'manage' as const, label: 'Manage Documents', icon: Settings },
-  ]
 
   const features = [
     {
@@ -73,20 +59,10 @@ export default function Home() {
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-6">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === tab.id
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
-                >
-                  <tab.icon className="w-4 h-4" />
-                  {tab.label}
-                </button>
-              ))}
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-blue-100 text-blue-700">
+                <MessageSquare className="w-4 h-4" />
+                Chat Assistant
+              </div>
             </nav>
 
             {/* Mobile Menu Button */}
@@ -107,23 +83,10 @@ export default function Home() {
               className="md:hidden py-4 border-t"
             >
               <nav className="flex flex-col gap-2">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => {
-                      setActiveTab(tab.id)
-                      setIsMobileMenuOpen(false)
-                    }}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      activeTab === tab.id
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                    }`}
-                  >
-                    <tab.icon className="w-4 h-4" />
-                    {tab.label}
-                  </button>
-                ))}
+                <div className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-blue-100 text-blue-700">
+                  <MessageSquare className="w-4 h-4" />
+                  Chat Assistant
+                </div>
               </nav>
             </motion.div>
           )}
@@ -132,99 +95,63 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'chat' && (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Features Sidebar */}
-            <div className="lg:col-span-1">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">What I Can Help With</CardTitle>
-                  <CardDescription>
-                    Ask me about any aspect of Tamil Nadu traffic rules
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {features.map((feature, index) => (
-                      <motion.div
-                        key={feature.title}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="flex gap-3"
-                      >
-                        <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <feature.icon className="w-4 h-4 text-blue-600" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-medium text-sm text-gray-900">
-                            {feature.title}
-                          </h3>
-                          <p className="text-xs text-gray-600 mt-1">
-                            {feature.description}
-                          </p>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                  
-                  <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                    <h3 className="font-medium text-sm text-blue-900 mb-2">
-                      Example Questions
-                    </h3>
-                    <ul className="text-xs text-blue-700 space-y-1">
-                      <li>• What is the speed limit in city areas?</li>
-                      <li>• What documents do I need for DL renewal?</li>
-                      <li>• What is the penalty for helmet violations?</li>
-                      <li>• How do I register a new vehicle?</li>
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Chat Interface */}
-            <div className="lg:col-span-3">
-              <Card className="h-[700px]">
-                <ChatInterface />
-              </Card>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Features Sidebar */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">What I Can Help With</CardTitle>
+                <CardDescription>
+                  Ask me about any aspect of Tamil Nadu traffic rules
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {features.map((feature, index) => (
+                    <motion.div
+                      key={feature.title}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="flex gap-3"
+                    >
+                      <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <feature.icon className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-medium text-sm text-gray-900">
+                          {feature.title}
+                        </h3>
+                        <p className="text-xs text-gray-600 mt-1">
+                          {feature.description}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+                
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                  <h3 className="font-medium text-sm text-blue-900 mb-2">
+                    Example Questions
+                  </h3>
+                  <ul className="text-xs text-blue-700 space-y-1">
+                    <li>• What is the speed limit in city areas?</li>
+                    <li>• What documents do I need for DL renewal?</li>
+                    <li>• What is the penalty for helmet violations?</li>
+                    <li>• How do I register a new vehicle?</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        )}
 
-        {activeTab === 'upload' && (
-          <div className="max-w-4xl mx-auto">
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Documents</h2>
-              <p className="text-gray-600">
-                Add new documents to enhance the assistant's knowledge base. 
-                Supported formats: PDF, TXT, DOCX (max 10MB each).
-              </p>
-            </div>
-            <FileUpload 
-              onUploadComplete={(documentId, filename) => {
-                console.log('Document uploaded:', { documentId, filename })
-              }}
-            />
+          {/* Chat Interface */}
+          <div className="lg:col-span-3">
+            <Card className="h-[700px]">
+              <ChatInterface />
+            </Card>
           </div>
-        )}
-
-        {activeTab === 'manage' && (
-          <div className="max-w-6xl mx-auto">
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Manage Documents</h2>
-              <p className="text-gray-600">
-                View, organize, and manage your uploaded documents. 
-                Rebuild the search index when needed for optimal performance.
-              </p>
-            </div>
-            <DocumentManager 
-              onDocumentChange={() => {
-                console.log('Document collection changed')
-              }}
-            />
-          </div>
-        )}
+        </div>
       </main>
 
       {/* Footer */}
