@@ -6,7 +6,7 @@ import json
 from dotenv import load_dotenv
 from typing import List, Tuple, Optional
 
-from .retriever import Retriever
+from .qdrant_retriever import QdrantRetriever
 
 # 🔐 Load environment variables from .env file
 load_dotenv()
@@ -16,26 +16,19 @@ class Generator:
         """
         Initializes the Hugging Face Router API client and the retriever.
         """
-        # Load your Retriever
-        BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        # Load Qdrant configuration
+        qdrant_url = os.getenv("QDRANT_URL")
+        qdrant_api_key = os.getenv("QDRANT_API_KEY")
         
-        # Try to use combined index first, fall back to original
-        combined_index_path = os.path.join(BASE_DIR, "data", "processed", "combined_faiss_index.idx")
-        combined_chunks_path = os.path.join(BASE_DIR, "data", "processed", "combined_chunks.json")
+        if not qdrant_url or not qdrant_api_key:
+            raise ValueError("QDRANT_URL and QDRANT_API_KEY environment variables must be set")
         
-        if os.path.exists(combined_index_path) and os.path.exists(combined_chunks_path):
-            self.retriever = Retriever(
-                index_path=combined_index_path,
-                chunk_json_path=combined_chunks_path
-            )
-            print("Using combined document index")
-        else:
-            # Fallback to original index
-            self.retriever = Retriever(
-                index_path=os.path.join(BASE_DIR, "data", "processed", "faiss_cosine_index.idx"),
-                chunk_json_path=os.path.join(BASE_DIR, "data", "processed", "TN_traffic_rules_chunks.json")
-            )
-            print("Using original traffic rules index")
+        # Initialize Qdrant retriever
+        self.retriever = QdrantRetriever(
+            url=qdrant_url,
+            api_key=qdrant_api_key
+        )
+        print("Using Qdrant Cloud vector database")
 
         # Available working models from HF Router API
         self.available_models = [

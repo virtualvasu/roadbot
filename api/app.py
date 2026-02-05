@@ -12,7 +12,7 @@ from src.document_manager import DocumentManager
 
 app = FastAPI(
     title="Traffic Rules RAG API",
-    description="A RAG-based assistant for Tamil Nadu traffic rules using Groq + FAISS",
+    description="A RAG-based assistant for Tamil Nadu traffic rules using Groq + Qdrant Cloud",
     version="1.0.0"
 )
 
@@ -154,20 +154,9 @@ def delete_document(document_id: str):
         print(f"Error in delete document endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/documents/rebuild-index")
-def rebuild_index():
-    if document_manager is None:
-        raise HTTPException(status_code=503, detail="Document manager not initialized.")
-    
-    try:
-        success, message = document_manager.rebuild_index()
-        if success:
-            # Reinitialize generator with new index
-            global generator
-            generator = Generator()
-            return {"success": True, "message": message}
-        else:
-            raise HTTPException(status_code=500, detail=message)
-    except Exception as e:
-        print(f"Error in rebuild index endpoint: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+@app.get("/health")
+def health_check():
+    """Health check endpoint"""
+    if generator is None or document_manager is None:
+        return {"status": "unhealthy", "message": "Services not initialized"}
+    return {"status": "healthy", "message": "All services are running"}

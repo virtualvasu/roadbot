@@ -11,7 +11,8 @@ from pathlib import Path
 
 from .text_extraction import extract_text_from_file
 from .chunking import chunk_text
-from .embedding import generate_embeddings, save_faiss_index
+from .embedding import generate_embeddings
+from .qdrant_vector_store import QdrantVectorStore
 
 
 class DocumentManager:
@@ -30,6 +31,15 @@ class DocumentManager:
         os.makedirs(self.uploads_dir, exist_ok=True)
         os.makedirs(self.processed_dir, exist_ok=True)
         os.makedirs(self.documents_dir, exist_ok=True)
+        
+        # Initialize Qdrant vector store
+        qdrant_url = os.getenv("QDRANT_URL")
+        qdrant_api_key = os.getenv("QDRANT_API_KEY")
+        
+        if not qdrant_url or not qdrant_api_key:
+            raise ValueError("QDRANT_URL and QDRANT_API_KEY environment variables must be set")
+            
+        self.vector_store = QdrantVectorStore(url=qdrant_url, api_key=qdrant_api_key)
         
         # Initialize metadata file if it doesn't exist
         if not os.path.exists(self.metadata_file):
@@ -99,9 +109,17 @@ class DocumentManager:
                 for i, chunk in enumerate(chunks)
             ]
             
-            chunks_file_path = os.path.join(self.documents_dir, f"{document_id}_chunks.json")
-            with open(chunks_file_path, 'w', encoding='utf-8') as f:
-                json.dump(chunks_with_metadata, f, indent=2, ensure_ascii=False)
+            # Generate embeddings and add to Qdrant
+            texts = [chunk["text"] for chunk in chunks_with_metadata]
+            embeddings = generate_embeddings(texts)
+            
+            # Add document chunks to Qdrant
+            success = self.vector_store.add_document_chunks(
+                chunks_with_metadata, embeddings, document_id, filename
+            )
+            
+            if not success:
+                raise Exception("Failed to add chunks to Qdrant vector store")
             
             # Update metadata
             metadata = self._load_metadata()
@@ -118,49 +136,11 @@ class DocumentManager:
             }
             self._save_metadata(metadata)
             
-            # Rebuild the combined index
-            await asyncio.get_event_loop().run_in_executor(None, self._rebuild_combined_index)
-            
             return True, f"Document '{filename}' processed successfully with {len(chunks)} chunks"
             
         except Exception as e:
             print(f"Error processing document {document_id}: {str(e)}")
             return False, f"Error processing document: {str(e)}"
-    
-    def _rebuild_combined_index(self):
-        """Rebuild the FAISS index with all documents."""
-        try:
-            metadata = self._load_metadata()
-            all_chunks = []
-            
-            # Collect all chunks from all documents
-            for doc_id, doc_info in metadata.items():
-                if doc_info["status"] == "processed" and os.path.exists(doc_info["chunks_file"]):
-                    with open(doc_info["chunks_file"], 'r', encoding='utf-8') as f:
-                        chunks = json.load(f)
-                        all_chunks.extend(chunks)
-            
-            if not all_chunks:
-                print("No chunks found for index building")
-                return
-            
-            # Generate embeddings for all chunks
-            texts = [chunk["text"] for chunk in all_chunks]
-            embeddings = generate_embeddings(texts)
-            
-            # Save combined index
-            combined_index_path = os.path.join(self.processed_dir, "combined_faiss_index.idx")
-            save_faiss_index(embeddings, combined_index_path)
-            
-            # Save combined chunks
-            combined_chunks_path = os.path.join(self.processed_dir, "combined_chunks.json")
-            with open(combined_chunks_path, 'w', encoding='utf-8') as f:
-                json.dump(all_chunks, f, indent=2, ensure_ascii=False)
-            
-            print(f"Combined index rebuilt with {len(all_chunks)} chunks from {len(metadata)} documents")
-            
-        except Exception as e:
-            print(f"Error rebuilding combined index: {str(e)}")
     
     def list_documents(self) -> List[Dict]:
         """List all documents with their metadata."""
@@ -206,8 +186,10 @@ class DocumentManager:
             del metadata[document_id]
             self._save_metadata(metadata)
             
-            # Rebuild index
-            self._rebuild_combined_index()
+            # Delete from Qdrant vector store
+            success = self.vector_store.delete_document(document_id)
+            if not success:
+                print(f"Warning: Failed to delete document {document_id} from Qdrant")
             
             return True, f"Document '{doc_info['filename']}' deleted successfully"
             
@@ -216,12 +198,13 @@ class DocumentManager:
             return False, f"Error deleting document: {str(e)}"
     
     def rebuild_index(self) -> Tuple[bool, str]:
-        """Manually rebuild the combined index."""
+        """Manually rebuild index - Not needed with Qdrant but kept for API compatibility."""
         try:
-            self._rebuild_combined_index()
-            return True, "Index rebuilt successfully"
+            # With Qdrant, no manual rebuilding is needed as updates are real-time
+            stats = self.vector_store.get_collection_info()
+            return True, f"Qdrant index is ready. Total points: {stats.get('total_points', 0)}"
         except Exception as e:
-            return False, f"Error rebuilding index: {str(e)}"
+            return False, f"Error checking index: {str(e)}"
     
     def get_document_chunks(self, document_ids: Optional[List[str]] = None) -> List[Dict]:
         """Get chunks for specific documents or all documents."""

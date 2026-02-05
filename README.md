@@ -5,7 +5,7 @@ An intelligent AI-powered assistant built using Retrieval-Augmented Generation (
 ## ✨ Features
 
 📁 **Multi-Document Upload** - Support for PDF, TXT, and DOCX files  
-🔍 **Intelligent Search** - RAG-powered semantic search with FAISS vector database  
+🔍 **Intelligent Search** - RAG-powered semantic search with Qdrant Cloud vector database  
 ⚡ **Real-time Processing** - Automatic document indexing and fast response times  
 🎯 **Source Attribution** - Answers include references to source documents  
 🗂️ **Document Management** - Upload, delete, and organize your document library  
@@ -17,7 +17,7 @@ An intelligent AI-powered assistant built using Retrieval-Augmented Generation (
 document_ai_assistant/
 ├── data/
 │   ├── processed/
-│   │   ├── combined_faiss_index.idx      # Combined vector index
+│   │   ├── (old FAISS indices removed)   # Now using Qdrant Cloud
 │   │   ├── combined_chunks.json          # All document chunks
 │   │   ├── documents_metadata.json       # Document metadata
 │   │   └── documents/                    # Individual document files
@@ -48,7 +48,7 @@ document_ai_assistant/
 **Backend:**
 - Python 3.11+
 - FastAPI for REST API with file upload support
-- FAISS for vector similarity search with cosine similarity
+- Qdrant Cloud for vector similarity search with cosine similarity
 - Sentence Transformers for text embeddings
 - HuggingFace Transformers / OpenAI for language generation
 - PyPDF2 for PDF text extraction
@@ -138,7 +138,7 @@ Visit `http://localhost:8000/docs` for interactive Swagger documentation.
 1. **Text Extraction**: Extract text from PDF documents
 2. **Chunking**: Split text into overlapping semantic chunks
 3. **Embedding**: Generate vector embeddings using sentence transformers
-4. **Indexing**: Store embeddings in FAISS index for fast retrieval
+4. **Indexing**: Store embeddings in Qdrant Cloud for fast retrieval
 5. **Retrieval**: Find relevant chunks for user queries
 6. **Generation**: Generate answers using language models
 
@@ -167,7 +167,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Tamil Nadu Government for traffic rules documentation
 - HuggingFace for providing excellent ML models and APIs
-- FAISS team for efficient vector search capabilities
+- Qdrant team for efficient cloud vector search capabilities
 
 ## Support
 
