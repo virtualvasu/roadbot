@@ -1,6 +1,6 @@
-# Traffic Rules Assistant - Tamil Nadu
+# RuleSense - Traffic Rules Assistant
 
-A production-ready RAG (Retrieval-Augmented Generation) system that provides intelligent answers to Tamil Nadu traffic rule queries using advanced vector search and large language models.
+🚦 **RuleSense** is a production-ready RAG (Retrieval-Augmented Generation) system that provides intelligent answers to Tamil Nadu traffic rule queries using advanced vector search and large language models.
 
 ## Table of Contents
 
@@ -18,15 +18,15 @@ A production-ready RAG (Retrieval-Augmented Generation) system that provides int
 
 ## Motivation
 
-During my visit to IIT Madras in January 2026, I found myself constantly googling "Chennai traffic rules" every few hours. After the fifth time searching for helmet penalty rates, I realized many people probably face this same struggle. Rather than bookmarking another government PDF, I decided to build an AI assistant that could instantly answer traffic rule questions in plain English.
+During my visit to IIT Madras in January 2026, I found myself constantly googling "Chennai traffic rules" every few hours. After the fifth time searching for helmet penalty rates, I realized many people probably face this same struggle. Rather than bookmarking another government PDF, I decided to build **RuleSense** - an AI assistant that could instantly answer traffic rule questions in plain English.
 
 Sometimes the best projects come from personal frustration with existing solutions.
 
 ## Project Overview
 
-The Traffic Rules Assistant is an advanced Retrieval-Augmented Generation (RAG) system specifically designed for Tamil Nadu traffic rules and regulations. The system combines semantic search capabilities with large language models to provide accurate, contextual answers to user queries about traffic laws, penalties, licensing procedures, and road safety guidelines.
+**RuleSense** is an advanced Retrieval-Augmented Generation (RAG) system specifically designed for Tamil Nadu traffic rules and regulations. The system combines semantic search capabilities with large language models to provide accurate, contextual answers to user queries about traffic laws, penalties, licensing procedures, and road safety guidelines.
 
-Unlike traditional search systems that return document links, this assistant understands natural language queries and generates comprehensive answers while citing relevant source materials. The system ensures accuracy by grounding all responses in official traffic rule documents and provides source attribution for transparency.
+Unlike traditional search systems that return document links, RuleSense understands natural language queries and generates comprehensive answers while citing relevant source materials. The system ensures accuracy by grounding all responses in official traffic rule documents and provides source attribution for transparency.
 
 ## Key Features
 
@@ -299,7 +299,7 @@ Visit `http://localhost:8000/docs` for complete Swagger/OpenAPI documentation.
 
 ## Contributing
 
-We welcome contributions to improve the Traffic Rules Assistant. Please follow these guidelines:
+We welcome contributions to improve **RuleSense**. Please follow these guidelines:
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/enhancement`)
@@ -320,5 +320,6 @@ This project is licensed under the MIT License. See the LICENSE file for details
 ---
 
 **Developer**: Vasu Garg  
-**Project Repository**: [Traffic Rules Assistant](https://github.com/virtualvasu/traffic_rules_assistant)  
+**Project**: RuleSense - Tamil Nadu Traffic Rules Assistant  
+**Repository**: [RuleSense](https://github.com/virtualvasu/traffic_rules_assistant)  
 **Contact**: [GitHub Profile](https://github.com/virtualvasu)
